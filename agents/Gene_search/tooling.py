@@ -23,6 +23,7 @@ import requests
 _DEFAULT_TIMEOUT = 30  # seconds for all outbound HTTP
 _MAX_RETRIES = 3       # default retry count
 _BACKOFF_BASE = 2.0    # exponential back‑off base
+_HEADERS_JSON = {"Accept": "application/json"}
 
 logger = logging.getLogger("mandrake.tooling")
 logger.setLevel(logging.INFO)
@@ -261,7 +262,6 @@ def bioc_pmc_search_and_fetch(query: str, max_hits: int = 5) -> List[Dict[str, A
 # -----------------------------------------------------------------------------
 
 _ENSEMBL_REST = "https://rest.ensembl.org"
-_HEADERS_JSON = {"Accept": "application/json"}
 
 
 def ensembl_search_genes(keyword: str, species: str, limit: int = 20) -> List[Dict[str, Any]]:
@@ -874,5 +874,34 @@ __all__ = [
     "kegg_gene_info",
     "kegg_convert_id",
 ]
+
+# -----------------------------------------------------------------------------
+# ALL_TOOLS_DICT - Mapping of function names to actual functions
+# -----------------------------------------------------------------------------
+
+ALL_TOOLS_DICT = {
+    "pubmed_search": {"function": pubmed_search},
+    "pubmed_fetch_summaries": {"function": pubmed_fetch_summaries},
+    "bioc_pmc_fetch_article": {"function": bioc_pmc_fetch_article},
+    "bioc_pmc_search_and_fetch": {"function": bioc_pmc_search_and_fetch},
+    "bioc_pmc_extract_text_content": {"function": bioc_pmc_extract_text_content},
+    "ensembl_search_genes": {"function": ensembl_search_genes},
+    "ensembl_gene_info": {"function": ensembl_gene_info},
+    "ensembl_orthologs": {"function": ensembl_orthologs},
+    "gramene_trait_search": {"function": gramene_trait_search},
+    "gramene_gene_symbol_search": {"function": gramene_gene_symbol_search},
+    "gramene_prioritized_search": {"function": gramene_prioritized_search},
+    "gramene_gene_lookup": {"function": gramene_gene_lookup},
+    "gwas_hits": {"function": gwas_hits},
+    "gwas_trait_search": {"function": gwas_trait_search},
+    "gwas_snp_search": {"function": gwas_snp_search},
+    "gwas_advanced_search": {"function": gwas_advanced_search},
+    "gwas_study_info": {"function": gwas_study_info},
+    "gwas_trait_info": {"function": gwas_trait_info},
+    "quickgo_annotations": {"function": quickgo_annotations},
+    "kegg_pathways": {"function": kegg_pathways},
+    "kegg_gene_info": {"function": kegg_gene_info},
+    "kegg_convert_id": {"function": kegg_convert_id},
+}
 
 # End of tooling.py – Mandrake‑GeneSearch
