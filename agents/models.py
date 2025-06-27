@@ -32,6 +32,7 @@ class WebResearchResult(BaseModel):
 
 
 class WebResearchAgentModel(BaseModel):
+    query: str
     raw_result: str
     research_paper: WebResearchResult
     upnext_queries: List[str]

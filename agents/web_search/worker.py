@@ -8,7 +8,7 @@ import json
 import logging
 from typing import Dict, Any, List
 from openai import AsyncOpenAI
-from .models import WebResearchAgentModel
+from .models import WebResearchAgentModel, WebResearchResult, SearchResult
 
 logger = logging.getLogger(__name__)
 
@@ -70,18 +70,21 @@ class WebResearchAgent:
             # Create the result model
             result = WebResearchAgentModel(
                 query=query,
-                research_summary=research_summary,
-                key_findings=[
-                    "Gene function analysis completed",
-                    "Trait associations identified", 
-                    "Pathway analysis performed",
-                    "Cross-species comparisons made"
-                ],
-                sources=[
-                    "PubMed Central",
-                    "NCBI Gene Database",
-                    "Ensembl Genome Browser",
-                    "KEGG Pathway Database"
+                raw_result=research_summary,
+                research_paper=WebResearchResult(
+                    search_result=[
+                        SearchResult(
+                            title="Gene Research Summary",
+                            url="https://example.com/research",
+                            abstract=research_summary[:200] + "..." if len(research_summary) > 200 else research_summary
+                        )
+                    ]
+                ),
+                upnext_queries=[
+                    f"Detailed analysis of {query}",
+                    f"Cross-species comparison for {query}",
+                    f"Pathway analysis for {query}",
+                    f"Expression data for {query}"
                 ]
             )
             

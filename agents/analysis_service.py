@@ -192,7 +192,7 @@ Gene Search Results:
 - Pathways: {len(gene_results.pathways)}
 
 Web Research Summary:
-{web_results.research_summary}
+{web_results.raw_result}
 
 Patterns Identified:
 {json.dumps(patterns, indent=2)}
