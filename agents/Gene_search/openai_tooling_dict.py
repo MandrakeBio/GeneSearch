@@ -208,10 +208,115 @@ TOOLING_DICT = {
         {
             "type": "function",
             "function": {
+                "name": "uniprot_search",
+                "description": (
+                    "Search UniProt for proteins by query term and organism. "
+                    "Returns protein records with accessions that can be used for QuickGO annotations."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search term (gene name, protein name, trait, etc.)."
+                        },
+                        "organism": {
+                            "type": "string",
+                            "description": "Organism filter (e.g., 'rice', 'arabidopsis', 'human')."
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100,
+                            "default": 20,
+                            "description": "Maximum results to return."
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "uniprot_gene_mapping",
+                "description": (
+                    "Map gene symbols to UniProt accessions. CRITICAL: Use this function first "
+                    "before calling quickgo_annotations as QuickGO only accepts UniProt accessions."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "gene_symbols": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "List of gene symbols to map to UniProt accessions."
+                        },
+                        "organism": {
+                            "type": "string",
+                            "description": "Organism filter (e.g., 'rice', 'arabidopsis', 'human')."
+                        }
+                    },
+                    "required": ["gene_symbols"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "gramene_gene_search",
+                "description": (
+                    "Search for plant genes using Ensembl Plants API. "
+                    "Supports species-specific searches and trait-based fallbacks."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search term for genes (name, description, trait)."
+                        },
+                        "species": {
+                            "type": "string",
+                            "default": "oryza_sativa",
+                            "description": "Species to search in (e.g., 'oryza_sativa' for rice, 'arabidopsis_thaliana')."
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100,
+                            "default": 20,
+                            "description": "Maximum results to return."
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "gramene_gene_lookup",
+                "description": (
+                    "Get detailed gene information from Ensembl Plants API. "
+                    "Provides comprehensive gene metadata including coordinates and transcripts."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "gene_id": {"type": "string", "description": "Ensembl gene ID."}
+                    },
+                    "required": ["gene_id"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
                 "name": "gramene_trait_search",
                 "description": (
-                    "Search the Gramene Genes endpoint for plant genes annotated with a given "
-                    "trait keyword or TO term and return matching Ensembl IDs."
+                    "DEPRECATED: Legacy Gramene trait search. Use gramene_gene_search instead for "
+                    "better plant gene discovery via Ensembl Plants integration."
                 ),
                 "parameters": {
                     "type": "object",
@@ -237,8 +342,8 @@ TOOLING_DICT = {
             "function": {
                 "name": "gramene_gene_symbol_search",
                 "description": (
-                    "Search Gramene for specific gene symbols that are known to be associated with traits. "
-                    "This is more reliable than trait-based searches as it uses exact gene symbols."
+                    "DEPRECATED: Legacy Gramene gene symbol search. Use gramene_gene_search instead "
+                    "for better results via Ensembl Plants integration."
                 ),
                 "parameters": {
                     "type": "object",
@@ -257,23 +362,6 @@ TOOLING_DICT = {
                         }
                     },
                     "required": ["gene_symbols"]
-                }
-            }
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "gramene_gene_lookup",
-                "description": (
-                    "Retrieve full Gramene record (genome, description, traits) for a specific "
-                    "Ensembl gene ID."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "gene_id": {"type": "string", "description": "Ensembl gene ID recognised by Gramene."}
-                    },
-                    "required": ["gene_id"]
                 }
             }
         },
@@ -460,20 +548,21 @@ TOOLING_DICT = {
             "function": {
                 "name": "quickgo_annotations",
                 "description": (
-                    "Fetch Gene Ontology annotations for a UniProt or Ensembl gene product via "
-                    "QuickGO, restricted to Experimental evidence by default."
+                    "Fetch Gene Ontology annotations for a UniProt protein ID via QuickGO. "
+                    "CRITICAL: ONLY accepts UniProt accessions (e.g., P12345). "
+                    "Must use uniprot_gene_mapping() first to convert gene symbols to UniProt IDs."
                 ),
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "gene_product_id": {
                             "type": "string",
-                            "description": "UniProt accession or Ensembl protein ID."
+                            "description": "UniProt accession ONLY (e.g., 'P12345', 'Q9UHC7'). Gene symbols will fail."
                         },
                         "evidence_codes": {
                             "type": "array",
                             "items": {"type": "string"},
-                            "description": "Optional list of GO evidence codes (e.g. 'IDA','IMP'). Empty = EXP‑only.",
+                            "description": "Optional list of GO evidence codes (e.g. 'IDA','IMP'). Empty = all evidence.",
                             "default": []
                         }
                     },
@@ -549,10 +638,10 @@ TOOLING_DICT = {
         {
             "type": "function",
             "function": {
-                "name": "gramene_prioritized_search",
+                "name": "gramene_gene_search_legacy",
                 "description": (
-                    "Prioritized Gramene search: gene symbols → stable IDs → ontology/annotation codes → trait terms. "
-                    "Tries up to 3 searches, combining queries where possible, and returns the first non-empty result."
+                    "DEPRECATED: Legacy comprehensive Gramene search function. "
+                    "Use gramene_gene_search instead for Ensembl Plants integration."
                 ),
                 "parameters": {
                     "type": "object",

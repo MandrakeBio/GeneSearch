@@ -66,10 +66,10 @@ class GWASHit(BaseModel):
 
 
 class GOAnnot(BaseModel):
-    go_id: str
-    term: str
+    go_id: Optional[str] = Field(None, description="GO identifier (e.g., GO:0006810)")
+    term: Optional[str] = Field(None, description="GO term name")
     aspect: Optional[str] = Field(None, description="P (BP), F (MF) or C (CC)")
-    evidence_code: str
+    evidence_code: Optional[str] = Field(None, description="Evidence code (e.g., IDA, IEA)")
     reference: Optional[str] = None  # PMID or GO_REF
     qualifier: Optional[str] = None
 

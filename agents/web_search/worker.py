@@ -1,105 +1,86 @@
-#!/usr/bin/env python3
-"""
-Web research agent for GeneSearch
-"""
+import openai
+from dotenv import load_dotenv
+from agents.web_search.models import (
+    WebResearchAgentModel,
+    WebResearchResult,
+    UpNextQueries
+)
+from agents.web_search.prompts import (
+    RESEARCH_PROMPT,
+    MAKE_AGENT_QUERY_PROMPT,
+    EXTRACT_FROM_RESEARCH_PROMPT
+)
 
-import asyncio
-import json
-import logging
-from typing import Dict, Any, List
-from openai import AsyncOpenAI
-from .models import WebResearchAgentModel, WebResearchResult, SearchResult
-
-logger = logging.getLogger(__name__)
-
-# System prompt for web research
-WEB_RESEARCH_PROMPT = """
-You are a web research agent specialized in finding and analyzing information about genes, traits, and biological processes.
-
-Your task is to:
-1. Search for relevant information about the given query
-2. Extract key findings and insights
-3. Identify potential gene-trait associations
-4. Provide a comprehensive summary
-
-Focus on:
-- Gene function and expression
-- Trait associations and mechanisms
-- Biological pathways and processes
-- Recent research findings
-- Cross-species comparisons
-
-Be thorough but concise. Structure your response with clear sections and bullet points.
-"""
+load_dotenv()
 
 class WebResearchAgent:
-    """Web research agent for finding gene and trait information"""
-    
-    def __init__(self, model: str = "gpt-4o-mini"):
-        self.client = AsyncOpenAI()
-        self.model = model
-    
-    async def research(self, query: str) -> WebResearchAgentModel:
-        """Perform web research on the given query"""
-        
-        try:
-            # Simulate web search (in a real implementation, this would call actual web search APIs)
-            await asyncio.sleep(2)  # Simulate search time
-            
-            # Simulate content extraction
-            await asyncio.sleep(1)  # Simulate extraction time
-            
-            # Simulate analysis
-            await asyncio.sleep(1.5)  # Simulate analysis time
-            
-            # Generate research summary using OpenAI
-            messages = [
-                {"role": "system", "content": WEB_RESEARCH_PROMPT},
-                {"role": "user", "content": f"Research the following topic: {query}"}
-            ]
-            
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=0.3,
-                max_tokens=1000
-            )
-            
-            research_summary = response.choices[0].message.content
-            
-            # Create the result model
-            result = WebResearchAgentModel(
-                query=query,
-                raw_result=research_summary,
-                research_paper=WebResearchResult(
-                    search_result=[
-                        SearchResult(
-                            title="Gene Research Summary",
-                            url="https://example.com/research",
-                            abstract=research_summary[:200] + "..." if len(research_summary) > 200 else research_summary
-                        )
-                    ]
-                ),
-                upnext_queries=[
-                    f"Detailed analysis of {query}",
-                    f"Cross-species comparison for {query}",
-                    f"Pathway analysis for {query}",
-                    f"Expression data for {query}"
-                ]
-            )
-            
-            return result
-            
-        except Exception as e:
-            logger.error(f"Web research failed: {e}")
-            raise
+    def __init__(self) -> None:
+        print("Initializing WebResearchAgent...")
+        self.client = openai.OpenAI()
 
-    async def get_raw_research_dump(self, query: str):
-        """Get raw research data dump"""
-        # This method can be implemented to return raw research data
-        # For now, return a simple structure
-        return {
-            "query": query,
-            "raw_data": f"Raw research data for: {query}",
-            "timestamp": "2024-01-01T00:00:00Z"
-        }
+    def get_raw_research_dump(self, query: str):
+        print(f"Getting raw research dump.")
+        result = self.client.chat.completions.create(
+            model="gpt-4o-search-preview",
+            web_search_options={
+                "search_context_size": "high"
+            },
+            messages=[
+                {"role": "system", "content": RESEARCH_PROMPT},
+                {"role": "user", "content": query}
+            ]
+        )
+        content = result.choices[0].message.content
+        print(f"Received raw research dump of length: {len(content)}")
+        return content
+    
+    def extract_from_research(self, query: str, research_dump: str):
+        print(f"Extracting structured data from research dump")
+        prompt = f""""
+        Here is the user query: {query} and the research dump from the model:
+        {research_dump} 
+        """
+        completions = self.client.beta.chat.completions.parse(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": EXTRACT_FROM_RESEARCH_PROMPT},
+                {"role": "user", "content": prompt}
+            ],
+            response_format=WebResearchResult
+        )
+        result = completions.choices[0].message.parsed
+        print(f"Extracted {len(result.search_result)} search results")
+        return result
+    
+    def find_queries_to_pass(self, query: str, research_dump: str):
+        print(f"Finding follow-up queries.")
+        prompt = f""""
+        Here is the user query: {query} and the research dump from the model:
+        {research_dump} 
+        """
+        completions = self.client.beta.chat.completions.parse(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": MAKE_AGENT_QUERY_PROMPT},
+                {"role": "user", "content": prompt}
+            ],
+            response_format=UpNextQueries
+        )
+        result = completions.choices[0].message.parsed
+        print(f"Generated {len(result.queries)} follow-up queries")
+        return result
+    
+    def search(self, query: str) -> WebResearchAgentModel:
+        print(f"\nStarting web research")
+        raw_result = self.get_raw_research_dump(query)
+        research_paper = self.extract_from_research(query, raw_result)
+        upnext_queries = self.find_queries_to_pass(query, raw_result)
+        
+        result = WebResearchAgentModel(
+            query=query,
+            raw_result=raw_result,
+            research_paper=research_paper,
+            upnext_queries=upnext_queries.queries
+        )
+        print(f"Completed web research with {len(result.research_paper.search_result)} results and {len(result.upnext_queries)} follow-up queries")
+        return result

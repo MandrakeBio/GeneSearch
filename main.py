@@ -1,3 +1,5 @@
+from dotenv import load_dotenv
+load_dotenv()
 #!/usr/bin/env python3
 """
 Main FastAPI application for GeneSearch
@@ -51,8 +53,13 @@ analysis_service = AnalysisService()
 class GeneSearchRequest(BaseModel):
     query: str
 
-class WebResearchRequest(BaseModel):
+class WebSearchRequest(BaseModel):
     query: str
+
+class SearchRequest(BaseModel):
+    query: str
+    include_web: bool = True
+    include_gene: bool = True
 
 class AnalysisRequest(BaseModel):
     gene_search_results: Dict[str, Any]
@@ -60,6 +67,14 @@ class AnalysisRequest(BaseModel):
 
 class ResearchRequest(BaseModel):
     query: str
+
+class CombinedSearchResult(BaseModel):
+    query: str
+    tool_results: Dict[str, Any]
+    trait_analysis: Dict[str, Any] = None
+    search_type: str
+    success: bool
+    total_execution_time: float
 
 # =============================================================================
 # API Endpoints
@@ -70,21 +85,22 @@ async def root():
     """Root endpoint"""
     return {
         "message": "GeneSearch API",
-        "version": "1.0.0",
+        "version": "2.0.0",
         "endpoints": {
-            "gene_search": "/gene-search",
-            "web_research": "/web-research", 
+            "web_search": "/web-search",
+            "gene_search": "/gene-search", 
+            "search": "/search",
             "analysis": "/analysis",
             "research": "/research"
         }
     }
 
 @app.post("/gene-search")
-async def gene_search(request: GeneSearchRequest) -> Dict[str, Any]:
+def gene_search(request: GeneSearchRequest) -> Dict[str, Any]:
     """Perform gene search"""
     try:
         logger.info(f"Gene search request: {request.query}")
-        result = await gene_search_agent.search(request.query)
+        result = gene_search_agent.search(request.query)
         return {
             "success": True,
             "result": result
@@ -93,19 +109,80 @@ async def gene_search(request: GeneSearchRequest) -> Dict[str, Any]:
         logger.error(f"Gene search failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/web-research")
-async def web_research(request: WebResearchRequest) -> Dict[str, Any]:
-    """Perform web research"""
+@app.post("/web-search")
+async def web_search(request: WebSearchRequest) -> Dict[str, Any]:
+    """Perform web search (literature agent only)"""
     try:
-        logger.info(f"Web research request: {request.query}")
-        result = await web_research_agent.research(request.query)
+        logger.info(f"Web search request: {request.query}")
+        result = web_research_agent.search(request.query)
         return {
             "success": True,
             "result": result.model_dump()
         }
     except Exception as e:
-        logger.error(f"Web research failed: {e}")
+        logger.error(f"Web search failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/search")
+def search(request: SearchRequest) -> CombinedSearchResult:
+    """Combined: literature + gene pipeline + analysis"""
+    import time
+    start_time = time.time()
+    
+    try:
+        logger.info(f"Combined search request: {request.query}")
+        
+        tool_results = {}
+        search_type_parts = []
+        
+        # Perform web search if requested
+        if request.include_web:
+            logger.info("Performing web search...")
+            web_results = web_research_agent.search(request.query)
+            tool_results["web_search"] = web_results.model_dump()
+            search_type_parts.append("web")
+        
+        # Perform gene search if requested
+        if request.include_gene:
+            logger.info("Performing gene search...")
+            gene_results = gene_search_agent.search(request.query)
+            tool_results["gene_search"] = gene_results
+            search_type_parts.append("gene")
+        
+        search_type = "+".join(search_type_parts) if search_type_parts else "none"
+        total_execution_time = time.time() - start_time
+        
+        # Create trait analysis summary
+        trait_analysis = None
+        if request.include_gene and "gene_search" in tool_results:
+            gene_data = tool_results["gene_search"]
+            trait_analysis = {
+                "analysis_markdown": gene_data.get("explanation", ""),
+                "top_hits": [gene.get("symbol", gene.get("gene_id", "")) for gene in gene_data.get("genes", [])[:5]],
+                "open_questions": [],
+                "evidence_map": {}
+            }
+        
+        return CombinedSearchResult(
+            query=request.query,
+            tool_results=tool_results,
+            trait_analysis=trait_analysis,
+            search_type=search_type,
+            success=True,
+            total_execution_time=total_execution_time
+        )
+        
+    except Exception as e:
+        logger.error(f"Combined search failed: {e}")
+        total_execution_time = time.time() - start_time
+        return CombinedSearchResult(
+            query=request.query,
+            tool_results={},
+            trait_analysis=None,
+            search_type="error",
+            success=False,
+            total_execution_time=total_execution_time
+        )
 
 @app.post("/analysis")
 async def analysis(request: AnalysisRequest) -> Dict[str, Any]:
@@ -131,32 +208,34 @@ async def analysis(request: AnalysisRequest) -> Dict[str, Any]:
         logger.error(f"Analysis failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Keep the old /research endpoint for backward compatibility
 @app.post("/research")
-async def research(request: ResearchRequest) -> Dict[str, Any]:
-    """Perform complete research workflow"""
+def research(request: ResearchRequest) -> Dict[str, Any]:
+    """Legacy endpoint - use /search instead"""
     try:
-        logger.info(f"Research request: {request.query}")
+        logger.info(f"Legacy research request: {request.query}")
         
         # Perform gene search
-        gene_results = await gene_search_agent.search(request.query)
+        gene_results = gene_search_agent.search(request.query)
         
-        # Perform web research
-        web_results = await web_research_agent.research(request.query)
+        return gene_results
         
-        # Perform analysis
-        from agents.Gene_search.models import GeneSearchResult
-        
-        gene_model = GeneSearchResult(**gene_results)
-        analysis_result = await analysis_service.analyze_results(gene_model, web_results)
-        
-        return {
-            "success": True,
-            "gene_search": gene_results,
-            "web_research": web_results.model_dump(),
-            "analysis": analysis_result
-        }
     except Exception as e:
         logger.error(f"Research failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/web-research")
+async def web_research(request: WebSearchRequest) -> Dict[str, Any]:
+    """Web research endpoint - alias for /web-search"""
+    try:
+        logger.info(f"Web research request: {request.query}")
+        result = web_research_agent.search(request.query)
+        return {
+            "success": True,
+            "result": result.model_dump()
+        }
+    except Exception as e:
+        logger.error(f"Web research failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # =============================================================================
