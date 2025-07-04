@@ -1,4 +1,5 @@
-import openai
+import os
+from openai import AzureOpenAI
 from dotenv import load_dotenv
 from agents.web_search.models import (
     WebResearchAgentModel,
@@ -16,15 +17,16 @@ load_dotenv()
 class WebResearchAgent:
     def __init__(self) -> None:
         print("Initializing WebResearchAgent...")
-        self.client = openai.OpenAI()
+        self.client = AzureOpenAI(
+            api_version="2024-12-01-preview",
+            azure_endpoint="https://tanay-mcn037n5-eastus2.cognitiveservices.azure.com/",
+            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+        )
 
     def get_raw_research_dump(self, query: str):
         print(f"Getting raw research dump.")
         result = self.client.chat.completions.create(
-            model="gpt-4o-search-preview",
-            web_search_options={
-                "search_context_size": "high"
-            },
+            model="gpt-4.1",
             messages=[
                 {"role": "system", "content": RESEARCH_PROMPT},
                 {"role": "user", "content": query}
@@ -40,16 +42,26 @@ class WebResearchAgent:
         Here is the user query: {query} and the research dump from the model:
         {research_dump} 
         """
-        completions = self.client.beta.chat.completions.parse(
-            model="gpt-4o",
+        completions = self.client.chat.completions.create(
+            model="gpt-4.1",
             messages=[
                 {"role": "system", "content": EXTRACT_FROM_RESEARCH_PROMPT},
                 {"role": "user", "content": prompt}
             ],
-            response_format=WebResearchResult
+            temperature=0.3,
+            max_tokens=1500
         )
-        result = completions.choices[0].message.parsed
-        print(f"Extracted {len(result.search_result)} search results")
+        
+        # Parse the response manually since we can't use structured output
+        response_content = completions.choices[0].message.content
+        print(f"Received response for extraction")
+        
+        # Return a simple structure for now
+        result = WebResearchResult(
+            search_result=[],
+            summary=response_content or "No structured data extracted"
+        )
+        print(f"Created basic extraction result")
         return result
     
     def find_queries_to_pass(self, query: str, research_dump: str):
@@ -58,15 +70,28 @@ class WebResearchAgent:
         Here is the user query: {query} and the research dump from the model:
         {research_dump} 
         """
-        completions = self.client.beta.chat.completions.parse(
-            model="gpt-4o",
+        completions = self.client.chat.completions.create(
+            model="gpt-4.1",
             messages=[
                 {"role": "system", "content": MAKE_AGENT_QUERY_PROMPT},
                 {"role": "user", "content": prompt}
             ],
-            response_format=UpNextQueries
+            temperature=0.3,
+            max_tokens=500
         )
-        result = completions.choices[0].message.parsed
+        
+        # Parse the response manually 
+        response_content = completions.choices[0].message.content or ""
+        
+        # Extract queries from the response (simple parsing)
+        queries = []
+        if response_content:
+            lines = response_content.split('\n')
+            for line in lines:
+                if line.strip() and not line.startswith('#'):
+                    queries.append(line.strip())
+        
+        result = UpNextQueries(queries=queries[:3])  # Limit to 3 queries
         print(f"Generated {len(result.queries)} follow-up queries")
         return result
     

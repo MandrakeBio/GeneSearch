@@ -185,7 +185,7 @@ def search(request: SearchRequest) -> CombinedSearchResult:
         )
 
 @app.post("/analysis")
-async def analysis(request: AnalysisRequest) -> Dict[str, Any]:
+async def analysis(request: AnalysisRequest) -> str:
     """Perform analysis of combined results"""
     try:
         logger.info("Analysis request received")
@@ -200,10 +200,7 @@ async def analysis(request: AnalysisRequest) -> Dict[str, Any]:
         # Perform analysis
         result = await analysis_service.analyze_results(gene_results, web_results)
         
-        return {
-            "success": True,
-            "result": result
-        }
+        return result
     except Exception as e:
         logger.error(f"Analysis failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
