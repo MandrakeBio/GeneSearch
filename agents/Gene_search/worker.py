@@ -3,7 +3,8 @@
 Gene search agent for GeneSearch - Based on protein search agent pattern
 """
 
-import openai
+import os
+from openai import AzureOpenAI
 from dotenv import load_dotenv
 from agents.Gene_search.models import (
     GeneSearchResult, GeneHit, GWASHit, GOAnnot, Pathway, PubMedSummary,
@@ -76,7 +77,16 @@ class ToolsToUseResult:
 
 class GeneSearchAgent:
     def __init__(self):
-        self.client = openai.OpenAI()
+        # Azure OpenAI configuration
+        self.endpoint = "https://tanay-mcn037n5-eastus2.cognitiveservices.azure.com/"
+        self.deployment = "o4-mini"
+        self.api_version = "2024-12-01-preview"
+        
+        self.client = AzureOpenAI(
+            api_version=self.api_version,
+            azure_endpoint=self.endpoint,
+            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+        )
         
     def determine_tools_to_use(self, query: str) -> List[str]:
         """
@@ -85,13 +95,13 @@ class GeneSearchAgent:
         """
         try:
             completion = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=self.deployment,
                 messages=[
                     {"role": "system", "content": TOOL_SELECTION_PROMPT},
                     {"role": "user", "content": f"User query: {query}"}
                 ],
                 temperature=0.2,
-                max_tokens=200
+                max_completion_tokens=200
             )
             
             # Parse the response to extract tool names
@@ -155,7 +165,7 @@ class GeneSearchAgent:
                 return self._generate_fallback_arguments(query, tool_name)
             
             completion = self.client.chat.completions.create(
-                model="gpt-4o",
+                model=self.deployment,
                 messages=[
                     {"role": "system", "content": PLANNER_SYSTEM_PROMPT},
                     {"role": "user", "content": f"Based on this query: '{query}', determine the arguments for the tool."}
@@ -423,13 +433,13 @@ class GeneSearchAgent:
         """
         try:
             completion = self.client.chat.completions.create(
-                model="gpt-4o",
+                model=self.deployment,
                 messages=[
                     {"role": "system", "content": EXPLAINER_PROMPT},
                     {"role": "user", "content": f"Trait: {structured_result.user_trait}\n\nEvidence: {structured_result.model_dump_json()}"}
                 ],
                 temperature=0.3,
-                max_tokens=800
+                max_completion_tokens=800
             )
             
             return completion.choices[0].message.content

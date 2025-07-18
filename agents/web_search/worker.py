@@ -1,4 +1,5 @@
-import openai
+import os
+from openai import AzureOpenAI
 from dotenv import load_dotenv
 from agents.web_search.models import (
     WebResearchAgentModel,
@@ -16,15 +17,23 @@ load_dotenv()
 class WebResearchAgent:
     def __init__(self) -> None:
         print("Initializing WebResearchAgent...")
-        self.client = openai.OpenAI()
+        # Azure OpenAI configuration
+        self.endpoint = "https://tanay-mcn037n5-eastus2.cognitiveservices.azure.com/"
+        self.deployment = "o4-mini"
+        self.api_version = "2024-12-01-preview"
+        
+        self.client = AzureOpenAI(
+            api_version=self.api_version,
+            azure_endpoint=self.endpoint,
+            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+        )
 
     def get_raw_research_dump(self, query: str):
         print(f"Getting raw research dump.")
         result = self.client.chat.completions.create(
-            model="gpt-4o-search-preview",
-            web_search_options={
-                "search_context_size": "high"
-            },
+            model=self.deployment,
+            # Note: Azure OpenAI doesn't support web_search_options like OpenAI's gpt-4o-search-preview
+            # We'll rely on the research prompt to guide the model
             messages=[
                 {"role": "system", "content": RESEARCH_PROMPT},
                 {"role": "user", "content": query}
@@ -41,7 +50,7 @@ class WebResearchAgent:
         {research_dump} 
         """
         completions = self.client.beta.chat.completions.parse(
-            model="gpt-4o",
+            model=self.deployment,
             messages=[
                 {"role": "system", "content": EXTRACT_FROM_RESEARCH_PROMPT},
                 {"role": "user", "content": prompt}
@@ -59,7 +68,7 @@ class WebResearchAgent:
         {research_dump} 
         """
         completions = self.client.beta.chat.completions.parse(
-            model="gpt-4o",
+            model=self.deployment,
             messages=[
                 {"role": "system", "content": MAKE_AGENT_QUERY_PROMPT},
                 {"role": "user", "content": prompt}
