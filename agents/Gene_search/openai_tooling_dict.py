@@ -1,7 +1,7 @@
 # Mandrake‑GeneSearch – OpenAI function‑calling manifest
 # ------------------------------------------------------
 # Each tool is a thin, deterministic wrapper around a public bioinformatics
-# API that helps identify candidate genes underlying plant traits.
+# API that helps identify biological entities and mechanisms for any biological question.
 # The schema strictly follows the pattern expected by the OpenAI `tools=`
 # parameter.
 
@@ -12,8 +12,8 @@ TOOLING_DICT = {
             "function": {
                 "name": "pubmed_search",
                 "description": (
-                    "Search the PubMed database (NCBI E‑utilities ESearch) for plant‑biology "
-                    "or trait‑relevant literature and return a list of PubMed IDs (PMIDs) "
+                    "Search the PubMed database (NCBI E‑utilities ESearch) for biological "
+                    "literature and return a list of PubMed IDs (PMIDs) "
                     "ordered by relevance."
                 ),
                 "parameters": {
@@ -21,7 +21,7 @@ TOOLING_DICT = {
                     "properties": {
                         "query": {
                             "type": "string",
-                            "description": "Full‑text Boolean query or MeSH terms, e.g. 'salt tolerance rice gene'."
+                            "description": "Full‑text Boolean query or MeSH terms, e.g. 'drought response mechanisms' or 'cancer pathway analysis'."
                         },
                         "max_hits": {
                             "type": "integer",
@@ -105,7 +105,7 @@ TOOLING_DICT = {
                     "properties": {
                         "query": {
                             "type": "string",
-                            "description": "Search query for PubMed, e.g. 'salt tolerance rice gene'."
+                            "description": "Search query for PubMed, e.g. 'drought response mechanisms' or 'cancer pathway analysis'."
                         },
                         "max_hits": {
                             "type": "integer",
@@ -144,21 +144,21 @@ TOOLING_DICT = {
             "function": {
                 "name": "ensembl_search_genes",
                 "description": (
-                    "Look up Ensembl Plant gene identifiers and basic metadata using the "
+                    "Look up Ensembl gene identifiers and basic metadata using the "
                     "xrefs/symbol endpoint. Accepts a species name (latin binomial) and a "
                     "gene symbol or keyword."
                 ),
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "keyword": {"type": "string", "description": "Gene symbol or free keyword."},
+                        "keyword": {"type": "string", "description": "Gene symbol, protein name, or biological keyword."},
                         "species": {"type": "string", "description": "Latin binomial, e.g. 'Oryza sativa'."},
                         "limit": {
                             "type": "integer",
                             "minimum": 1,
                             "maximum": 50,
                             "default": 20,
-                            "description": "Maximum number of matching genes to return."
+                            "description": "Maximum number of matching biological entities to return."
                         }
                     },
                     "required": ["keyword", "species"]
@@ -188,7 +188,7 @@ TOOLING_DICT = {
                 "name": "ensembl_orthologs",
                 "description": (
                     "Retrieve ortholog information (homology/id) for a given Ensembl gene ID "
-                    "across one or more target plant species."
+                    "across one or more target species."
                 ),
                 "parameters": {
                     "type": "object",
@@ -197,7 +197,7 @@ TOOLING_DICT = {
                         "target_species": {
                             "type": "array",
                             "items": {"type": "string"},
-                            "description": "Optional list of latin‑binomial species codes. Empty = all available plants.",
+                            "description": "Optional list of latin‑binomial species codes. Empty = all available species.",
                             "default": []
                         }
                     },
@@ -218,11 +218,11 @@ TOOLING_DICT = {
                     "properties": {
                         "query": {
                             "type": "string",
-                            "description": "Search term (gene name, protein name, trait, etc.)."
+                            "description": "Search term (gene name, protein name, biological process, etc.)."
                         },
                         "organism": {
                             "type": "string",
-                            "description": "Organism filter (e.g., 'rice', 'arabidopsis', 'human')."
+                            "description": "Organism filter (e.g., 'human', 'mouse', 'drosophila', 'rice')."
                         },
                         "limit": {
                             "type": "integer",
@@ -266,20 +266,20 @@ TOOLING_DICT = {
             "function": {
                 "name": "gramene_gene_search",
                 "description": (
-                    "Search for plant genes using Ensembl Plants API. "
-                    "Supports species-specific searches and trait-based fallbacks."
+                    "Search for genes using Ensembl API. "
+                    "Supports species-specific searches and biological process-based fallbacks."
                 ),
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "query": {
                             "type": "string",
-                            "description": "Search term for genes (name, description, trait)."
+                            "description": "Search term for genes (name, description, biological process)."
                         },
                         "species": {
                             "type": "string",
-                            "default": "oryza_sativa",
-                            "description": "Species to search in (e.g., 'oryza_sativa' for rice, 'arabidopsis_thaliana')."
+                            "default": "homo_sapiens",
+                            "description": "Species to search in (e.g., 'homo_sapiens' for human, 'mus_musculus' for mouse, 'oryza_sativa' for rice)."
                         },
                         "limit": {
                             "type": "integer",
@@ -298,7 +298,7 @@ TOOLING_DICT = {
             "function": {
                 "name": "gramene_gene_lookup",
                 "description": (
-                    "Get detailed gene information from Ensembl Plants API. "
+                    "Get detailed gene information from Ensembl API. "
                     "Provides comprehensive gene metadata including coordinates and transcripts."
                 ),
                 "parameters": {
@@ -316,21 +316,21 @@ TOOLING_DICT = {
                 "name": "gramene_trait_search",
                 "description": (
                     "DEPRECATED: Legacy Gramene trait search. Use gramene_gene_search instead for "
-                    "better plant gene discovery via Ensembl Plants integration."
+                    "better gene discovery via Ensembl integration."
                 ),
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "trait_term": {
                             "type": "string",
-                            "description": "Trait keyword or Trait Ontology (TO) term, e.g. 'TO:0006001' or 'salt tolerance'."
+                            "description": "Biological process or phenotype term, e.g. 'drought response' or 'cancer progression'."
                         },
                         "limit": {
                             "type": "integer",
                             "minimum": 1,
                             "maximum": 100,
                             "default": 30,
-                            "description": "Max genes to return."
+                            "description": "Max biological entities to return."
                         }
                     },
                     "required": ["trait_term"]
@@ -343,7 +343,7 @@ TOOLING_DICT = {
                 "name": "gramene_gene_symbol_search",
                 "description": (
                     "DEPRECATED: Legacy Gramene gene symbol search. Use gramene_gene_search instead "
-                    "for better results via Ensembl Plants integration."
+                    "for better results via Ensembl integration."
                 ),
                 "parameters": {
                     "type": "object",
@@ -351,14 +351,14 @@ TOOLING_DICT = {
                         "gene_symbols": {
                             "type": "array",
                             "items": {"type": "string"},
-                            "description": "List of gene symbols to search for, e.g. ['HKT1', 'NHX1', 'SOS1'] for salt tolerance genes."
+                            "description": "List of gene symbols to search for, e.g. ['TP53', 'BRCA1', 'EGFR'] for cancer-related genes."
                         },
                         "limit": {
                             "type": "integer",
                             "minimum": 1,
                             "maximum": 100,
                             "default": 30,
-                            "description": "Max genes to return."
+                            "description": "Max biological entities to return."
                         }
                     },
                     "required": ["gene_symbols"]
@@ -371,7 +371,7 @@ TOOLING_DICT = {
                 "name": "gwas_hits",
                 "description": (
                     "Query the GWAS Catalog REST API for trait associations involving a gene "
-                    "name (preferred) or genomic region (chr‑start‑end) in plants. Returns p‑value, trait, and PMID."
+                    "name (preferred) or genomic region (chr‑start‑end). Returns p‑value, trait, and PMID."
                 ),
                 "parameters": {
                     "type": "object",
@@ -408,7 +408,7 @@ TOOLING_DICT = {
                     "properties": {
                         "trait_term": {
                             "type": "string",
-                            "description": "Trait term to search for (e.g., 'diabetes', 'obesity', 'salt tolerance')."
+                            "description": "Trait term to search for (e.g., 'diabetes', 'obesity', 'cancer')."
                         },
                         "pval_threshold": {
                             "type": "number",
@@ -472,7 +472,7 @@ TOOLING_DICT = {
                         },
                         "trait_term": {
                             "type": "string",
-                            "description": "Trait term to search for (optional)."
+                            "description": "Biological process or phenotype term to search for (optional)."
                         },
                         "snp_id": {
                             "type": "string",
@@ -529,14 +529,14 @@ TOOLING_DICT = {
                     "properties": {
                         "trait_term": {
                             "type": "string",
-                            "description": "Trait term to search for (e.g., 'diabetes', 'obesity')."
+                            "description": "Biological process or phenotype term to search for (e.g., 'diabetes', 'cancer')."
                         },
                         "max_hits": {
                             "type": "integer",
                             "minimum": 1,
                             "maximum": 50,
                             "default": 10,
-                            "description": "Maximum number of traits to return."
+                            "description": "Maximum number of biological processes to return."
                         }
                     },
                     "required": ["trait_term"]
@@ -600,7 +600,7 @@ TOOLING_DICT = {
                     "properties": {
                         "gene_id": {
                             "type": "string", 
-                            "description": "KEGG gene entry ID, e.g. 'osa:4326559' for rice genes."
+                            "description": "KEGG gene entry ID, e.g. 'hsa:7157' for human genes."
                         }
                     },
                     "required": ["gene_id"]
@@ -641,7 +641,7 @@ TOOLING_DICT = {
                 "name": "gramene_gene_search_legacy",
                 "description": (
                     "DEPRECATED: Legacy comprehensive Gramene search function. "
-                    "Use gramene_gene_search instead for Ensembl Plants integration."
+                    "Use gramene_gene_search instead for Ensembl integration."
                 ),
                 "parameters": {
                     "type": "object",
@@ -649,12 +649,12 @@ TOOLING_DICT = {
                         "gene_symbols": {
                             "type": "array",
                             "items": {"type": "string"},
-                            "description": "List of gene symbols to search for, e.g. ['HKT1', 'NHX1', 'SOS1'] for salt tolerance genes."
+                            "description": "List of gene symbols to search for, e.g. ['TP53', 'BRCA1', 'EGFR'] for cancer-related genes."
                         },
                         "stable_ids": {
                             "type": "array",
                             "items": {"type": "string"},
-                            "description": "List of stable Ensembl or Gramene gene IDs, e.g. ['AT3G52430', 'Os01g0100100']."
+                            "description": "List of stable Ensembl gene IDs, e.g. ['ENSG00000141510', 'ENSG00000139618']."
                         },
                         "ontology_codes": {
                             "type": "array",
@@ -664,14 +664,14 @@ TOOLING_DICT = {
                         "trait_terms": {
                             "type": "array",
                             "items": {"type": "string"},
-                            "description": "List of trait terms, e.g. ['salt tolerance', 'drought resistance']."
+                            "description": "List of biological processes, e.g. ['cancer progression', 'immune response']."
                         },
                         "limit": {
                             "type": "integer",
                             "minimum": 1,
                             "maximum": 100,
                             "default": 30,
-                            "description": "Max genes to return."
+                            "description": "Max biological entities to return."
                         }
                     },
                     "required": []

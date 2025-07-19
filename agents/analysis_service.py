@@ -19,35 +19,43 @@ logger = logging.getLogger(__name__)
 
 # System prompt for analysis
 ANALYSIS_PROMPT = """
-You are an expert biological data analyst specializing in gene-trait associations and pathway analysis.
+You are an expert biological data analyst specializing in comprehensive biological research synthesis and interpretation.
 
-Your task is to analyze gene search results and web research findings to provide a comprehensive scientific analysis.
+Your task is to analyze biological search results and web research findings to provide a comprehensive scientific analysis for any biological question.
 
 Format your response with:
 1. **Executive Summary** - Brief overview of findings
-2. **Gene Rankings** - Ranked list of genes with evidence
+2. **Key Biological Entities** - Ranked list of relevant biological entities with evidence
 3. **Key Findings** - Important discoveries from the analysis
-4. **Biological Insights** - Mechanistic explanations
-5. **Recommendations** - Actionable next steps
+4. **Biological Insights** - Mechanistic explanations and scientific context
+5. **Recommendations** - Actionable next steps for research
 
 Use the following formatting guidelines:
-- Put important terms and gene names in "quotes" for bold formatting
+- Put important terms and biological entities in "quotes" for bold formatting
 - Include clickable links in this format: [Link Text](URL)
 - Use clear headers and bullet points
-- Provide scientific explanations that are accessible
+- Provide scientific explanations that are accessible to researchers
 
 Focus on:
-- Strength of association evidence (GWAS, literature, functional studies)
-- Biological plausibility of mechanisms
-- Cross-species conservation and validation
-- Pathway involvement and network effects
-- Clinical or agricultural relevance
+- Strength of evidence (statistical, literature, experimental studies)
+- Biological plausibility and mechanistic understanding
+- Cross-species conservation and validation (when applicable)
+- Pathway involvement and network effects (when relevant)
+- Clinical, agricultural, or research relevance
+- Evolutionary context and comparative biology (when applicable)
+
+Adapt your analysis to the specific biological domain:
+- For gene questions: Focus on genetic associations, expression patterns, functional studies
+- For pathway questions: Emphasize molecular mechanisms, regulatory networks, signaling cascades
+- For disease questions: Highlight pathological mechanisms, therapeutic targets, clinical implications
+- For evolutionary questions: Focus on phylogenetic relationships, selection pressures, adaptation mechanisms
+- For mechanism questions: Emphasize molecular processes, cellular responses, biological systems
 
 Provide clear, scientifically sound explanations with proper citations and links.
 """
 
 class AnalysisService:
-    """Service for analyzing gene search and web research results"""
+    """Service for analyzing biological search and web research results"""
     
     def __init__(self, model: str = "o4-mini"):
         # Azure OpenAI configuration
@@ -68,7 +76,7 @@ class AnalysisService:
         """Stream analysis output directly from the AI"""
         
         try:
-            logger.info(f"Starting streaming analysis for trait: {gene_results.user_trait}")
+            logger.info(f"Starting streaming analysis for query: {gene_results.user_trait}")
             
             # Prepare comprehensive data for analysis
             analysis_data = self._prepare_analysis_data(gene_results, web_results)
@@ -76,15 +84,15 @@ class AnalysisService:
             messages = [
                 {"role": "system", "content": ANALYSIS_PROMPT},
                 {"role": "user", "content": f"""
-Analyze the following research data for the trait: {gene_results.user_trait}
+Analyze the following research data for the biological question: {gene_results.user_trait}
 
-Gene Search Results:
-- Total genes found: {len(gene_results.genes)}
-- GWAS associations: {len(gene_results.gwas_hits)}
+Biological Search Results:
+- Total biological entities found: {len(gene_results.genes)}
+- Statistical associations: {len(gene_results.gwas_hits)}
 - Publications: {len(gene_results.pubmed_summaries)}
-- Pathways: {len(gene_results.pathways)}
+- Pathways/Processes: {len(gene_results.pathways)}
 
-Gene Details:
+Biological Entity Details:
 {json.dumps(analysis_data['gene_summaries'], indent=2)}
 
 Web Research Context:
@@ -94,11 +102,11 @@ Research Papers Found:
 {json.dumps(analysis_data['research_papers'], indent=2)}
 
 Please provide a comprehensive analysis with proper formatting:
-- Use "quotes" around important terms and gene names for bold formatting
+- Use "quotes" around important terms and biological entities for bold formatting
 - Include clickable links where relevant using [Text](URL) format
 - Structure your response with clear headers
 - Provide scientific explanations and biological insights
-- Include specific recommendations for gene editing or therapeutic targeting
+- Include specific recommendations for research or experimental approaches
 
 Focus on practical applications and actionable insights.
 """}
@@ -125,7 +133,7 @@ Focus on practical applications and actionable insights.
                               web_results: WebResearchAgentModel) -> Dict[str, Any]:
         """Prepare comprehensive data for analysis"""
         
-        # Prepare gene summaries
+        # Prepare biological entity summaries
         gene_summaries = []
         for gene in gene_results.genes:
             gene_name = gene.symbol or gene.gene_id
@@ -143,13 +151,13 @@ Focus on practical applications and actionable insights.
                               if path.description and gene_name.lower() in path.description.lower()]
             
             gene_summary = {
-                "gene_name": gene_name,
-                "gene_id": gene.gene_id,
+                "entity_name": gene_name,
+                "entity_id": gene.gene_id,
                 "species": gene.species,
                 "description": gene.description,
-                "gwas_hits": len(gwas_evidence),
+                "statistical_associations": len(gwas_evidence),
                 "publications": len(pub_evidence),
-                "pathways": len(pathway_evidence),
+                "pathways_processes": len(pathway_evidence),
                 "ensembl_link": f"https://www.ensembl.org/Multi/Search/Results?q={gene_name}",
                 "ncbi_link": f"https://www.ncbi.nlm.nih.gov/gene/?term={gene_name}",
                 "uniprot_link": f"https://www.uniprot.org/uniprot/?query={gene_name}&sort=score",
@@ -175,21 +183,21 @@ Focus on practical applications and actionable insights.
         return {
             "gene_summaries": gene_summaries,
             "research_papers": research_papers,
-            "trait": gene_results.user_trait
+            "query": gene_results.user_trait
         }
     
     def analyze_results(self, 
                             gene_results: GeneSearchResult, 
                             web_results: WebResearchAgentModel) -> Dict[str, Any]:
-        """Analyze combined results from gene search and web research"""
+        """Analyze combined results from biological search and web research"""
         
         try:
-            logger.info(f"Starting analysis for trait: {gene_results.user_trait}")
-            logger.info(f"Gene results: {len(gene_results.genes)} genes, {len(gene_results.gwas_hits)} GWAS hits")
+            logger.info(f"Starting analysis for query: {gene_results.user_trait}")
+            logger.info(f"Biological results: {len(gene_results.genes)} entities, {len(gene_results.gwas_hits)} associations")
             
-            # Rank genes by priority
-            ranked_genes = self._rank_genes_by_priority(gene_results, web_results)
-            logger.info(f"Ranked genes: {len(ranked_genes)} genes ranked")
+            # Rank biological entities by priority
+            ranked_entities = self._rank_genes_by_priority(gene_results, web_results)
+            logger.info(f"Ranked entities: {len(ranked_entities)} entities ranked")
             
             # Generate analysis summary
             analysis_summary = self._generate_analysis_summary(gene_results, web_results)
@@ -197,7 +205,7 @@ Focus on practical applications and actionable insights.
             
             # Create final result
             result = {
-                "ranked_genes": ranked_genes,
+                "ranked_entities": ranked_entities,
                 "analysis_summary": analysis_summary,
                 "sources_analyzed": self._get_sources_summary(gene_results, web_results)
             }
@@ -210,16 +218,16 @@ Focus on practical applications and actionable insights.
     
     def _rank_genes_by_priority(self, gene_results: GeneSearchResult, 
                                     web_results: WebResearchAgentModel) -> List[Dict[str, Any]]:
-        """Rank genes by priority based on evidence and relevance"""
+        """Rank biological entities by priority based on evidence and relevance"""
         
         if not gene_results.genes:
-            logger.info("No genes found in gene_results, returning empty rankings")
+            logger.info("No biological entities found in gene_results, returning empty rankings")
             return []
         
-        # Prepare gene data with associated evidence
+        # Prepare biological entity data with associated evidence
         gene_data = []
         for gene in gene_results.genes:
-            # Find associated GWAS hits
+            # Find associated statistical associations
             gene_name = gene.symbol or gene.gene_id
             gwas_evidence = [hit for hit in gene_results.gwas_hits 
                            if hasattr(hit, 'gene_name') and hit.gene_name and 
@@ -230,7 +238,7 @@ Focus on practical applications and actionable insights.
                           if gene_name.lower() in pub.title.lower() or 
                           gene_name.lower() in pub.abstract.lower() if pub.abstract]
             
-            # Find associated pathways
+            # Find associated pathways/processes
             pathway_evidence = [path for path in gene_results.pathways 
                               if gene_name.lower() in path.description.lower() if path.description]
             
@@ -241,14 +249,14 @@ Focus on practical applications and actionable insights.
                 "pathways": pathway_evidence
             })
         
-        # Use AI to rank genes and generate hypotheses
+        # Use AI to rank biological entities and generate hypotheses
         ranked_genes = self._generate_gene_rankings(gene_data, gene_results.user_trait, web_results)
         
         return ranked_genes
     
     def _generate_gene_rankings(self, gene_data: List[Dict], trait: str, 
                                     web_results: WebResearchAgentModel) -> List[Dict[str, Any]]:
-        """Generate AI-powered gene rankings with hypotheses"""
+        """Generate AI-powered biological entity rankings with hypotheses"""
         
         # Prepare data for AI analysis
         gene_summaries = []
@@ -256,15 +264,15 @@ Focus on practical applications and actionable insights.
             gene = data["gene"]
             gene_name = gene.symbol or gene.gene_id
             summary = {
-                "gene_name": gene_name,
-                "gene_id": gene.gene_id,
+                "entity_name": gene_name,
+                "entity_id": gene.gene_id,
                 "species": gene.species,
                 "description": gene.description,
-                "gwas_hits": len(data["gwas_hits"]),
+                "statistical_associations": len(data["gwas_hits"]),
                 "publications": len(data["publications"]),
-                "pathways": len(data["pathways"]),
-                "gwas_details": [{"trait": hit.trait, "p_value": getattr(hit, 'pvalue', None)} 
-                               for hit in data["gwas_hits"][:3]],  # Top 3 GWAS hits
+                "pathways_processes": len(data["pathways"]),
+                "association_details": [{"trait": hit.trait, "p_value": getattr(hit, 'pvalue', None)} 
+                               for hit in data["gwas_hits"][:3]],  # Top 3 associations
                 "pub_titles": [pub.title for pub in data["publications"][:3]]  # Top 3 publications
             }
             gene_summaries.append(summary)
@@ -272,24 +280,24 @@ Focus on practical applications and actionable insights.
         messages = [
             {"role": "system", "content": ANALYSIS_PROMPT},
             {"role": "user", "content": f"""
-Rank the following genes by their relevance to the trait: {trait}
+Rank the following biological entities by their relevance to the query: {trait}
 
-Gene Data:
+Biological Entity Data:
 {json.dumps(gene_summaries, indent=2)}
 
 Web Research Context:
 {web_results.raw_result[:1000]}...
 
-Please rank these genes from highest to lowest priority and provide:
-1. Gene name and priority ranking
+Please rank these biological entities from highest to lowest priority and provide:
+1. Entity name and priority ranking
 2. Key evidence supporting the association
-3. Biological hypothesis explaining why this gene makes sense for the trait
+3. Biological hypothesis explaining why this entity makes sense for the query
 4. Confidence level in the association
 
 Return as a JSON array with this structure:
 [
   {{
-    "gene_name": "GENE1",
+    "entity_name": "ENTITY1",
     "priority_rank": 1,
     "evidence_summary": "Key evidence points...",
     "biological_hypothesis": "Explanation of mechanism...",
@@ -335,15 +343,15 @@ Return as a JSON array with this structure:
         # Combine AI rankings with detailed evidence
         final_rankings = []
         for ranking in ai_rankings:
-            gene_name = ranking.get("gene_name", "")
+            entity_name = ranking.get("entity_name", "")
             
             # Find the original gene data
             original_data = next((data for data in gene_data 
-                                if (data["gene"].symbol or data["gene"].gene_id) == gene_name), None)
+                                if (data["gene"].symbol or data["gene"].gene_id) == entity_name), None)
             
             if original_data:
-                gene_info = {
-                    "gene_name": gene_name,
+                entity_info = {
+                    "entity_name": entity_name,
                     "priority_rank": ranking.get("priority_rank", 0),
                     "evidence_summary": ranking.get("evidence_summary", ""),
                     "biological_hypothesis": ranking.get("biological_hypothesis", ""),
@@ -351,24 +359,24 @@ Return as a JSON array with this structure:
                     "references": self._format_references(original_data),
                     "hyperlinks": self._generate_hyperlinks(original_data["gene"]),
                     "detailed_evidence": {
-                        "gwas_associations": len(original_data["gwas_hits"]),
+                        "statistical_associations": len(original_data["gwas_hits"]),
                         "literature_support": len(original_data["publications"]),
                         "pathway_involvement": len(original_data["pathways"])
                     }
                 }
-                final_rankings.append(gene_info)
+                final_rankings.append(entity_info)
         
         return final_rankings
     
     def _format_references(self, gene_data: Dict) -> List[Dict[str, str]]:
-        """Format references for a gene"""
+        """Format references for a biological entity"""
         references = []
         
-        # Add GWAS references
-        for hit in gene_data["gwas_hits"][:5]:  # Top 5 GWAS hits
+        # Add statistical association references
+        for hit in gene_data["gwas_hits"][:5]:  # Top 5 associations
             references.append({
-                "type": "GWAS",
-                "description": f"GWAS association: {hit.trait}",
+                "type": "Statistical Association",
+                "description": f"Association: {hit.trait}",
                 "details": f"P-value: {getattr(hit, 'p_value', 'N/A')}"
             })
         
@@ -380,10 +388,10 @@ Return as a JSON array with this structure:
                 "details": f"PMID: {pub.pmid}"
             })
         
-        # Add pathway references
+        # Add pathway/process references
         for pathway in gene_data["pathways"][:3]:  # Top 3 pathways
             references.append({
-                "type": "Pathway",
+                "type": "Pathway/Process",
                 "description": pathway.name,
                 "details": f"ID: {pathway.pathway_id}"
             })
@@ -391,7 +399,7 @@ Return as a JSON array with this structure:
         return references
     
     def _generate_hyperlinks(self, gene) -> Dict[str, str]:
-        """Generate relevant hyperlinks for a gene"""
+        """Generate relevant hyperlinks for a biological entity"""
         links = {}
         
         if gene.gene_id:
@@ -420,15 +428,15 @@ Return as a JSON array with this structure:
         """Generate comprehensive analysis summary"""
         
         messages = [
-            {"role": "system", "content": "You are a scientific analyst summarizing gene research results."},
+            {"role": "system", "content": "You are a scientific analyst summarizing biological research results."},
             {"role": "user", "content": f"""
-Provide a concise summary of the analysis performed for the trait: {gene_results.user_trait}
+Provide a concise summary of the analysis performed for the query: {gene_results.user_trait}
 
 Data analyzed:
-- {len(gene_results.genes)} genes identified
-- {len(gene_results.gwas_hits)} GWAS associations found
+- {len(gene_results.genes)} biological entities identified
+- {len(gene_results.gwas_hits)} statistical associations found
 - {len(gene_results.pubmed_summaries)} scientific publications reviewed
-- {len(gene_results.pathways)} biological pathways identified
+- {len(gene_results.pathways)} biological pathways/processes identified
 
 Web research summary:
 {web_results.raw_result[:500]}...
@@ -456,10 +464,10 @@ Provide a 2-3 paragraph summary of what was analyzed and the overall findings.
                 "KEGG Pathway Database",
                 "QuickGO Gene Ontology"
             ],
-            "total_genes_found": len(gene_results.genes),
+            "total_biological_entities_found": len(gene_results.genes),
             "total_publications": len(gene_results.pubmed_summaries),
-            "total_gwas_hits": len(gene_results.gwas_hits),
-            "total_pathways": len(gene_results.pathways),
+            "total_statistical_associations": len(gene_results.gwas_hits),
+            "total_pathways_processes": len(gene_results.pathways),
             "web_sources": len(web_results.sources) if hasattr(web_results, 'sources') else 0,
             "query_analyzed": gene_results.user_trait
         }
