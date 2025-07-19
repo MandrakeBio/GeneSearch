@@ -100,7 +100,6 @@ class GeneSearchAgent:
                     {"role": "system", "content": TOOL_SELECTION_PROMPT},
                     {"role": "user", "content": f"User query: {query}"}
                 ],
-                temperature=0.2,
                 max_completion_tokens=200
             )
             
@@ -171,8 +170,7 @@ class GeneSearchAgent:
                     {"role": "user", "content": f"Based on this query: '{query}', determine the arguments for the tool."}
                 ],
                 tools=[openai_tool],
-                tool_choice={"type": "function", "function": {"name": tool_name}},
-                temperature=0.2
+                tool_choice={"type": "function", "function": {"name": tool_name}}
             )
             
             if completion.choices[0].message.tool_calls:
@@ -438,7 +436,6 @@ class GeneSearchAgent:
                     {"role": "system", "content": EXPLAINER_PROMPT},
                     {"role": "user", "content": f"Trait: {structured_result.user_trait}\n\nEvidence: {structured_result.model_dump_json()}"}
                 ],
-                temperature=0.3,
                 max_completion_tokens=800
             )
             

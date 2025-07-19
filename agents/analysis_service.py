@@ -108,7 +108,6 @@ Focus on practical applications and actionable insights.
             response = self.client.chat.completions.create(
                 model=self.deployment,
                 messages=messages,
-                temperature=0.3,
                 max_completion_tokens=2000,
                 stream=True  # Enable streaming
             )
@@ -303,7 +302,6 @@ Return as a JSON array with this structure:
         response = self.client.chat.completions.create(
             model=self.deployment,
             messages=messages,
-            temperature=0.3,
             max_completion_tokens=1500,
             stream=False  # Disable streaming for now
         )
@@ -442,7 +440,6 @@ Provide a 2-3 paragraph summary of what was analyzed and the overall findings.
         response = self.client.chat.completions.create(
             model=self.deployment,
             messages=messages,
-            temperature=0.3,
             max_completion_tokens=400
         )
         
